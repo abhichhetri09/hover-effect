@@ -46,8 +46,8 @@ Hover Effect is a TypeScript project that adds a hover highlight effect to eleme
 
 2. Include the built JavaScript file in your HTML:
 
-   ```html
-   <script src="./dist/bundle.js"></script>
+   ```
+   html <script src="./dist/bundle.js"></script>
    ```
 
 3. The hover effect will be automatically initialized when the page loads.
