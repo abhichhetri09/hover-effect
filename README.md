@@ -56,8 +56,8 @@ Hover Effect is a TypeScript project that adds a hover highlight effect to eleme
 
 Use the following command to watch for changes and rebuild:
 
-    ``` npm run dev
-    ```
+    npm run dev
+
 
 ## Project Structure
 
