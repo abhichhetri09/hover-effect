@@ -1,32 +1,27 @@
 declare global {
   interface Window {
-    builderState: any;
+    upez__cart_settings: any;
   }
-}
-
-interface TemplateSetting {
-  id: string;
-  value?: any;
-  default?: any;
 }
 
 export class HoverEffect {
   private highlightClass = "upez-highlight";
-  private builderStateKey: string | null = null;
-  private builderStateObserver: MutationObserver | null = null;
+  private settings: any;
 
   constructor() {
     console.log("HoverEffect constructor called");
+    this.settings = window.upez__cart_settings || {};
     this.addHighlightStyle();
   }
 
   private addHighlightStyle(): void {
     console.log("Adding highlight style");
+    const primaryColor = this.settings.primary_color || "#3ECCEC";
     const style = document.createElement("style");
     style.textContent = `
       .${this.highlightClass} {
         outline: 5px solid red !important;
-        background-color:  !important;
+       
         transition: all 0.3s ease-in-out;
         position: relative;
         z-index: 9999;
@@ -36,35 +31,19 @@ export class HoverEffect {
     console.log("Highlight style added");
   }
 
-  private getTemplateSettings(): TemplateSetting[] {
-    if (!this.builderStateKey || !window.builderState) return [];
-    return window.builderState[this.builderStateKey]?.[0]?.data?.settings || [];
-  }
-
-  private findSettingByValue(value: string): TemplateSetting | undefined {
-    const settings = this.getTemplateSettings();
-    console.log("Searching for setting with value:", value);
-    console.log("Available settings:", settings);
-    return settings.find((setting) => {
-      const match =
-        String(setting.value) === value || String(setting.default) === value;
-      if (match) console.log("Matched setting:", setting);
-      return match;
-    });
+  private hexToRGBA(hex: string, alpha: number): string {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
   }
 
   private addHoverListeners(): void {
     console.log("Adding hover listeners");
     document.body.addEventListener("mouseover", (event) => {
       const target = event.target as HTMLElement;
-      console.log("Mouseover event on:", target.tagName, target.textContent);
-      const setting = this.findSettingForElement(target);
-
-      target.classList.add(this.highlightClass);
-      if (setting) {
-        console.log("Template Setting found:", setting);
-      } else {
-        console.log("No template setting found for this element");
+      if (this.shouldHighlight(target)) {
+        target.classList.add(this.highlightClass);
       }
     });
 
@@ -75,76 +54,47 @@ export class HoverEffect {
     console.log("Hover listeners added");
   }
 
-  private findSettingForElement(
-    element: HTMLElement
-  ): TemplateSetting | undefined {
+  private shouldHighlight(element: HTMLElement): boolean {
+    const classes = element.classList;
+    const id = element.id;
     const text = element.textContent?.trim();
-    console.log("Searching for setting with text:", text);
-    if (text) {
-      return this.findSettingByValue(text);
+
+    // Check for specific classes, IDs, or text content
+    if (
+      classes.contains("upez-btn--basic-button") ||
+      classes.contains("upez-btn--blue") ||
+      id === "upezCart" ||
+      text === this.settings.__label_checkout ||
+      text === this.settings.__label_cart_empty
+    ) {
+      return true;
     }
-    return undefined;
+
+    // Check for elements related to shipping goals
+    if (this.settings.shipping_goals) {
+      for (const goal of this.settings.shipping_goals) {
+        if (
+          text?.includes(goal.goal_label) ||
+          text?.includes(goal.goal_value)
+        ) {
+          return true;
+        }
+      }
+    }
+
+    // Check for elements related to free gift
+    if (this.settings.free_gift_template__settings) {
+      if (text === this.settings.free_gift_template__settings.button_label) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
-  public async init(): Promise<void> {
+  public init(): void {
     console.log("HoverEffect init started");
-    try {
-      await this.waitForBuilderState();
-      this.addHoverListeners();
-      console.log("Hover effect initialized");
-    } catch (error) {
-      console.error("Error in init method:", error);
-    } finally {
-      if (this.builderStateObserver) {
-        this.builderStateObserver.disconnect();
-      }
-    }
-  }
-
-  private waitForBuilderState(): Promise<void> {
-    return new Promise((resolve) => {
-      if (window.builderState && Object.keys(window.builderState).length > 0) {
-        this.initBuilderStateKey();
-        resolve();
-      } else {
-        this.builderStateObserver = new MutationObserver(() => {
-          if (
-            window.builderState &&
-            Object.keys(window.builderState).length > 0
-          ) {
-            this.initBuilderStateKey();
-            resolve();
-            this.builderStateObserver!.disconnect();
-          }
-        });
-
-        this.builderStateObserver.observe(document, {
-          attributes: true,
-          childList: true,
-          subtree: true,
-        });
-
-        setTimeout(() => {
-          console.warn(
-            "builderState not set after 10 seconds, continuing initialization"
-          );
-          resolve();
-        }, 10000);
-      }
-    });
-  }
-
-  private initBuilderStateKey(): void {
-    if (window.builderState) {
-      const keys = Object.keys(window.builderState);
-      if (keys.length > 0) {
-        this.builderStateKey = keys[0];
-        console.log("builderStateKey initialized:", this.builderStateKey);
-      } else {
-        console.warn("builderState is empty");
-      }
-    } else {
-      console.warn("builderState is not defined");
-    }
+    this.addHoverListeners();
+    console.log("Hover effect initialized");
   }
 }
