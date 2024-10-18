@@ -1,6 +1,9 @@
 declare global {
   interface Window {
     upez__cart_settings: any;
+    state: {
+      getSettingValue: (key: string) => any;
+    };
   }
 }
 
@@ -14,14 +17,21 @@ export class HoverEffect {
     this.addHighlightStyle();
   }
 
+  private getSettingValue(key: string, defaultValue?: any): any {
+    if (window.state && typeof window.state.getSettingValue === "function") {
+      return window.state.getSettingValue(key) ?? defaultValue;
+    }
+    return this.settings[key] ?? defaultValue;
+  }
+
   private addHighlightStyle(): void {
     console.log("Adding highlight style");
-    const primaryColor = this.settings.primary_color || "#3ECCEC";
+
     const style = document.createElement("style");
     style.textContent = `
       .${this.highlightClass} {
-        outline: 5px solid red !important;
-       
+     outline: 2px solid red !important;
+        box-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
         transition: all 0.3s ease-in-out;
         position: relative;
         z-index: 9999;
@@ -42,8 +52,10 @@ export class HoverEffect {
     console.log("Adding hover listeners");
     document.body.addEventListener("mouseover", (event) => {
       const target = event.target as HTMLElement;
-      if (this.shouldHighlight(target)) {
+      if (this.isElementRelatedToSetting(target)) {
         target.classList.add(this.highlightClass);
+        console.log("Hovered element:", target);
+        console.log("Related setting:", this.getRelatedSetting(target));
       }
     });
 
@@ -51,12 +63,11 @@ export class HoverEffect {
       const target = event.target as HTMLElement;
       target.classList.remove(this.highlightClass);
     });
-    console.log("Hover listeners added");
   }
 
-  private shouldHighlight(element: HTMLElement): boolean {
-    const classes = element.classList;
+  private isElementRelatedToSetting(element: HTMLElement): boolean {
     const id = element.id;
+    const classes = element.classList;
     const text = element.textContent?.trim();
 
     // Check for specific classes, IDs, or text content
@@ -64,15 +75,16 @@ export class HoverEffect {
       classes.contains("upez-btn--basic-button") ||
       classes.contains("upez-btn--blue") ||
       id === "upezCart" ||
-      text === this.settings.__label_checkout ||
-      text === this.settings.__label_cart_empty
+      text === this.getSettingValue("__label_checkout") ||
+      text === this.getSettingValue("__label_cart_empty")
     ) {
       return true;
     }
 
     // Check for elements related to shipping goals
-    if (this.settings.shipping_goals) {
-      for (const goal of this.settings.shipping_goals) {
+    const shippingGoals = this.getSettingValue("shipping_goals", []);
+    if (shippingGoals.length > 0) {
+      for (const goal of shippingGoals) {
         if (
           text?.includes(goal.goal_label) ||
           text?.includes(goal.goal_value)
@@ -83,13 +95,21 @@ export class HoverEffect {
     }
 
     // Check for elements related to free gift
-    if (this.settings.free_gift_template__settings) {
-      if (text === this.settings.free_gift_template__settings.button_label) {
-        return true;
-      }
+    const freeGiftSettings = this.getSettingValue(
+      "free_gift_template__settings",
+      {}
+    );
+    if (freeGiftSettings && text === freeGiftSettings.button_label) {
+      return true;
     }
 
     return false;
+  }
+
+  private getRelatedSetting(element: HTMLElement): any {
+    // Implement logic to determine which setting is related to the hovered element
+    // This is a placeholder implementation
+    return { settingName: "Example Setting", value: "Example Value" };
   }
 
   public init(): void {
